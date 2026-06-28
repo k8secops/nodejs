@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: nodejs-frontend
-          image: DOCKERHUB_USER/demo-nodejs:latest
+          image: k8secops/nodejs:nodejs-main-0000019f-20260628-063206 # {"$imagepolicy": "flux-system:demo-nodejs"}
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
