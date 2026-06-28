@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nodejs-frontend-config
+  namespace: demo
+data:
+  GO_SERVICE_URL: "http://go-catalog:8081"
+  JAVA_SERVICE_URL: "http://java-inventory:8080"

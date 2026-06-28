@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>GitOps Demo — Tech Store</title>
+  <style>
+    :root {
+      --go:    #00add8;
+      --java:  #f89820;
+      --node:  #3c873a;
+      --bg:    #0f1117;
+      --card:  #1a1d27;
+      --border:#2a2d3a;
+      --text:  #e2e8f0;
+      --muted: #718096;
+      --green: #48bb78;
+      --red:   #fc8181;
+      --yellow:#f6e05e;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+    /* ── Header ── */
+    header{background:var(--card);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+    .logo{display:flex;align-items:center;gap:12px}
+    .logo-icon{width:32px;height:32px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+    .logo h1{font-size:1.1rem;font-weight:700;letter-spacing:-0.3px}
+    .logo span{font-size:.75rem;color:var(--muted);margin-top:1px}
+    .header-right{display:flex;align-items:center;gap:20px}
+    .svc-badges{display:flex;gap:10px}
+    .badge{display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:.75rem;font-weight:600}
+    .dot{width:7px;height:7px;border-radius:50%;background:var(--muted);transition:.3s}
+    .dot.up{background:var(--green);box-shadow:0 0 6px var(--green)}
+    .dot.down{background:var(--red)}
+    .refresh-time{font-size:.72rem;color:var(--muted)}
+
+    /* ── Stats bar ── */
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border-bottom:1px solid var(--border)}
+    .stat{background:var(--card);padding:18px 28px;display:flex;align-items:center;gap:14px}
+    .stat-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+    .stat-icon.go{background:rgba(0,173,216,.15);color:var(--go)}
+    .stat-icon.java{background:rgba(248,152,32,.15);color:var(--java)}
+    .stat-icon.java2{background:rgba(248,152,32,.15);color:var(--java)}
+    .stat-num{font-size:1.6rem;font-weight:700;line-height:1}
+    .stat-label{font-size:.72rem;color:var(--muted);margin-top:2px}
+    .stat-src{font-size:.65rem;font-weight:600;margin-top:4px;opacity:.7}
+    .stat-src.go{color:var(--go)}
+    .stat-src.java{color:var(--java)}
+
+    /* ── Main grid ── */
+    main{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto;gap:20px;padding:20px 28px;max-width:1400px;margin:0 auto}
+    .panel{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+    .panel.full{grid-column:1/-1}
+    .panel-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+    .panel-title{display:flex;align-items:center;gap:10px;font-size:.9rem;font-weight:600}
+    .svc-tag{font-size:.65rem;font-weight:700;padding:3px 8px;border-radius:6px;letter-spacing:.5px}
+    .svc-tag.go{background:rgba(0,173,216,.15);color:var(--go)}
+    .svc-tag.java{background:rgba(248,152,32,.15);color:var(--java)}
+    .svc-tag.node{background:rgba(60,135,58,.15);color:var(--node)}
+
+    /* ── Product cards (Go) ── */
+    .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;padding:16px}
+    .product-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px;transition:border-color .2s}
+    .product-card:hover{border-color:var(--go)}
+    .product-card h3{font-size:.82rem;font-weight:600;margin-bottom:6px;line-height:1.3}
+    .cat-badge{font-size:.62rem;background:rgba(255,255,255,.06);color:var(--muted);padding:2px 7px;border-radius:4px;display:inline-block;margin-bottom:8px}
+    .price{font-size:1rem;font-weight:700;color:var(--go)}
+    .stock-bar{margin-top:8px}
+    .stock-label{font-size:.65rem;color:var(--muted);margin-bottom:3px}
+    .bar-bg{background:var(--border);border-radius:3px;height:4px}
+    .bar-fill{height:4px;border-radius:3px;background:var(--green);transition:width .4s}
+    .bar-fill.low{background:var(--yellow)}
+    .bar-fill.critical{background:var(--red)}
+
+    /* ── Tables ── */
+    .table-wrap{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;font-size:.82rem}
+    th{padding:10px 16px;text-align:left;color:var(--muted);font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border)}
+    td{padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.04)}
+    tr:last-child td{border-bottom:none}
+    tr:hover td{background:rgba(255,255,255,.02)}
+    .price-cell{font-weight:600;color:var(--text)}
+    .stock-pill{font-size:.7rem;padding:2px 8px;border-radius:10px;font-weight:600}
+    .stock-pill.ok{background:rgba(72,187,120,.15);color:var(--green)}
+    .stock-pill.low{background:rgba(246,224,94,.15);color:var(--yellow)}
+    .stock-pill.critical{background:rgba(252,129,129,.15);color:var(--red)}
+    .status-pill{font-size:.7rem;padding:2px 8px;border-radius:10px;font-weight:600}
+    .status-PENDING{background:rgba(99,179,237,.15);color:#63b3ed}
+    .status-PROCESSING{background:rgba(246,224,94,.15);color:var(--yellow)}
+    .status-SHIPPED{background:rgba(72,187,120,.15);color:var(--green)}
+    .status-DELIVERED{background:rgba(183,148,246,.15);color:#b794f4}
+    .status-CANCELLED{background:rgba(252,129,129,.15);color:var(--red)}
+
+    /* ── Orders panel extras ── */
+    .orders-header-row{display:flex;align-items:center;justify-content:space-between}
+    .btn{background:var(--java);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:.78rem;font-weight:600;cursor:pointer;transition:opacity .2s}
+    .btn:hover{opacity:.85}
+    .btn:disabled{opacity:.4;cursor:not-allowed}
+
+    /* ── Architecture footer ── */
+    .arch{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px 28px;margin:0 28px 24px;display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap}
+    .arch-node{text-align:center}
+    .arch-box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 16px;font-size:.78rem;font-weight:600;min-width:120px}
+    .arch-box.node-svc{border-color:var(--node)}
+    .arch-box.go-svc{border-color:var(--go)}
+    .arch-box.java-svc{border-color:var(--java)}
+    .arch-box .port{font-size:.65rem;font-weight:400;opacity:.6;display:block;margin-top:2px}
+    .arch-arrow{color:var(--muted);font-size:.85rem;padding:0 12px;display:flex;align-items:center}
+    .arch-split{display:flex;flex-direction:column;gap:8px}
+
+    /* ── States ── */
+    .empty{padding:40px;text-align:center;color:var(--muted);font-size:.85rem}
+    .loading{padding:40px;text-align:center;color:var(--muted);font-size:.85rem;animation:pulse 1.5s infinite}
+    .error-msg{padding:16px;text-align:center;color:var(--red);font-size:.82rem}
+    @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+
+    .toast{position:fixed;bottom:24px;right:24px;background:#2d3748;border:1px solid var(--border);border-radius:10px;padding:12px 18px;font-size:.82rem;transform:translateY(80px);opacity:0;transition:.3s;z-index:100}
+    .toast.show{transform:translateY(0);opacity:1}
+    .toast.ok{border-left:3px solid var(--green)}
+    .toast.err{border-left:3px solid var(--red)}
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🚀</div>
+    <div>
+      <h1>GitOps Demo — Tech Store</h1>
+      <span>Multi-Service Platform</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="svc-badges">
+      <div class="badge"><div class="dot" id="dot-go"></div>Go Catalog</div>
+      <div class="badge"><div class="dot" id="dot-java"></div>Java Inventory</div>
+      <div class="badge"><div class="dot up"></div>Node.js Frontend</div>
+    </div>
+    <div class="refresh-time" id="refresh-time">Loading…</div>
+  </div>
+</header>
+
+<div class="stats">
+  <div class="stat">
+    <div class="stat-icon go">📦</div>
+    <div>
+      <div class="stat-num" id="stat-catalog">—</div>
+      <div class="stat-label">Catalog Products</div>
+      <div class="stat-src go">Go Service :8081</div>
+    </div>
+  </div>
+  <div class="stat">
+    <div class="stat-icon java">🏭</div>
+    <div>
+      <div class="stat-num" id="stat-inventory">—</div>
+      <div class="stat-label">Inventory Items</div>
+      <div class="stat-src java">Java Service :8080</div>
+    </div>
+  </div>
+  <div class="stat">
+    <div class="stat-icon java2">🛒</div>
+    <div>
+      <div class="stat-num" id="stat-orders">—</div>
+      <div class="stat-label">Orders</div>
+      <div class="stat-src java">Java Service :8080</div>
+    </div>
+  </div>
+</div>
+
+<main>
+  <!-- Product Catalog — Go -->
+  <div class="panel full">
+    <div class="panel-header">
+      <div class="panel-title">
+        📦 Product Catalog
+        <span class="svc-tag go">GO SERVICE</span>
+      </div>
+    </div>
+    <div id="catalog-content"><div class="loading">Fetching from Go service…</div></div>
+  </div>
+
+  <!-- Inventory — Java -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">
+        🏭 Inventory
+        <span class="svc-tag java">JAVA SERVICE</span>
+      </div>
+    </div>
+    <div id="inventory-content" class="table-wrap"><div class="loading">Fetching from Java service…</div></div>
+  </div>
+
+  <!-- Orders — Java -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="orders-header-row" style="width:100%">
+        <div class="panel-title">
+          🛒 Orders
+          <span class="svc-tag java">JAVA SERVICE</span>
+        </div>
+        <button class="btn" id="order-btn" onclick="placeOrder()">+ Place Demo Order</button>
+      </div>
+    </div>
+    <div id="orders-content" class="table-wrap"><div class="loading">Fetching from Java service…</div></div>
+  </div>
+</main>
+
+<!-- Architecture diagram -->
+<div class="arch">
+  <div class="arch-node">
+    <div class="arch-box">🌐 Browser</div>
+  </div>
+  <div class="arch-arrow">→</div>
+  <div class="arch-node">
+    <div class="arch-box node-svc">Node.js Frontend<span class="port">:3000 (NodePort 30080)</span></div>
+  </div>
+  <div class="arch-arrow">→</div>
+  <div class="arch-split">
+    <div class="arch-box go-svc">Go Catalog Service<span class="port">:8081 (ClusterIP)</span></div>
+    <div class="arch-box java-svc">Java Inventory Service<span class="port">:8080 (ClusterIP)</span></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+  async function get(url) {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.json();
+  }
+
+  function showToast(msg, type = 'ok') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast ${type} show`;
+    setTimeout(() => t.className = 'toast', 3000);
+  }
+
+  // ── Render: Catalog (Go) ─────────────────────────────────────────────────────
+  function renderCatalog(products) {
+    if (!products?.length) return '<div class="empty">No products from Go service</div>';
+    document.getElementById('stat-catalog').textContent = products.length;
+    return `<div class="cards">${products.map(p => {
+      const pct = Math.min(100, (p.stock / 300) * 100);
+      const cls = p.stock < 50 ? 'critical' : p.stock < 100 ? 'low' : '';
+      return `<div class="product-card">
+        <span class="cat-badge">${p.category}</span>
+        <h3>${p.name}</h3>
+        <div class="price">$${p.price.toFixed(2)}</div>
+        <div class="stock-bar">
+          <div class="stock-label">Stock: ${p.stock}</div>
+          <div class="bar-bg"><div class="bar-fill ${cls}" style="width:${pct}%"></div></div>
+        </div>
+      </div>`;
+    }).join('')}</div>`;
+  }
+
+  // ── Render: Inventory (Java) ─────────────────────────────────────────────────
+  function renderInventory(products) {
+    if (!products?.length) return '<div class="empty">No inventory from Java service</div>';
+    document.getElementById('stat-inventory').textContent = products.length;
+    return `<table>
+      <thead><tr><th>Name</th><th>Category</th><th>Price</th><th>Stock</th></tr></thead>
+      <tbody>${products.map(p => {
+        const sc = p.stockQuantity < 10 ? 'critical' : p.stockQuantity < 30 ? 'low' : 'ok';
+        const sl = p.stockQuantity < 10 ? 'Critical' : p.stockQuantity < 30 ? 'Low' : 'OK';
+        return `<tr>
+          <td><strong>${p.name}</strong><br><span style="color:var(--muted);font-size:.72rem">${p.description || ''}</span></td>
+          <td>${p.category}</td>
+          <td class="price-cell">$${Number(p.price).toFixed(2)}</td>
+          <td><span class="stock-pill ${sc}">${p.stockQuantity} — ${sl}</span></td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+  }
+
+  // ── Render: Orders (Java) ────────────────────────────────────────────────────
+  let inventoryProducts = [];
+
+  function renderOrders(orders) {
+    document.getElementById('stat-orders').textContent = orders.length;
+    if (!orders.length) return '<div class="empty">No orders yet — click "Place Demo Order" to create one</div>';
+    return `<table>
+      <thead><tr><th>#</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th></tr></thead>
+      <tbody>${[...orders].reverse().map(o => `<tr>
+        <td style="color:var(--muted)">#${o.id}</td>
+        <td>${o.customerName}<br><span style="color:var(--muted);font-size:.7rem">${o.customerEmail}</span></td>
+        <td>${(o.items || []).length} item(s)</td>
+        <td class="price-cell">$${Number(o.totalAmount || 0).toFixed(2)}</td>
+        <td><span class="status-pill status-${o.status}">${o.status}</span></td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  }
+
+  // ── Place demo order ─────────────────────────────────────────────────────────
+  const names = ['Alice Johnson', 'Bob Smith', 'Carol White', 'David Lee', 'Eva Martinez'];
+  const domains = ['demo.com', 'example.org', 'test.io'];
+
+  async function placeOrder() {
+    if (!inventoryProducts.length) { showToast('Inventory not loaded yet', 'err'); return; }
+    const btn = document.getElementById('order-btn');
+    btn.disabled = true;
+    btn.textContent = 'Placing…';
+
+    const name   = names[Math.floor(Math.random() * names.length)];
+    const email  = `${name.split(' ')[0].toLowerCase()}@${domains[Math.floor(Math.random() * domains.length)]}`;
+    const picked = inventoryProducts[Math.floor(Math.random() * inventoryProducts.length)];
+    const qty    = Math.floor(Math.random() * 3) + 1;
+
+    try {
+      const r = await fetch('/api/inventory/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerName: name,
+          customerEmail: email,
+          items: [{ productId: picked.id, quantity: qty }],
+        }),
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      showToast(`Order placed for ${name} — ${qty}× ${picked.name}`);
+      await loadOrders();
+    } catch (e) {
+      showToast(`Failed to place order: ${e.message}`, 'err');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '+ Place Demo Order';
+    }
+  }
+
+  // ── Load functions ───────────────────────────────────────────────────────────
+  async function loadHealth() {
+    try {
+      const h = await get('/api/services/health');
+      document.getElementById('dot-go').className   = 'dot ' + (h.go?.status   === 'ok' ? 'up' : 'down');
+      document.getElementById('dot-java').className = 'dot ' + (h.java?.status === 'UP' || h.java?.status === 'ok' ? 'up' : 'down');
+    } catch {}
+  }
+
+  async function loadCatalog() {
+    try {
+      const data = await get('/api/catalog');
+      document.getElementById('catalog-content').innerHTML = renderCatalog(data);
+    } catch {
+      document.getElementById('catalog-content').innerHTML = '<div class="error-msg">⚠ Go service unavailable</div>';
+    }
+  }
+
+  async function loadInventory() {
+    try {
+      const data = await get('/api/inventory/products');
+      inventoryProducts = data;
+      document.getElementById('inventory-content').innerHTML = renderInventory(data);
+    } catch {
+      document.getElementById('inventory-content').innerHTML = '<div class="error-msg">⚠ Java service unavailable</div>';
+    }
+  }
+
+  async function loadOrders() {
+    try {
+      const data = await get('/api/inventory/orders');
+      document.getElementById('orders-content').innerHTML = renderOrders(data);
+    } catch {
+      document.getElementById('orders-content').innerHTML = '<div class="error-msg">⚠ Java service unavailable</div>';
+    }
+  }
+
+  async function loadAll() {
+    await Promise.all([loadHealth(), loadCatalog(), loadInventory(), loadOrders()]);
+    document.getElementById('refresh-time').textContent =
+      'Updated ' + new Date().toLocaleTimeString();
+  }
+
+  loadAll();
+  setInterval(loadAll, 30000);
+</script>
+</body>
+</html>
