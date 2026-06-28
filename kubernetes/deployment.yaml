@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: nodejs-frontend
-          image: index.docker.io/k8secops/nodejs:nodejs-main-0000019f-20260628-063921 # {"$imagepolicy": "flux-system:demo-nodejs"}
+          image: index.docker.io/k8secops/nodejs:nodejs-main-0000019f-20260628-082214 # {"$imagepolicy": "flux-system:demo-nodejs"}
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
